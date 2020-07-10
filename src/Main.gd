@@ -12,11 +12,15 @@ var edge_prefab = preload("res://scenes/Edge.tscn")
 onready var camera:Camera = $Camera
 onready var input = $InputMonitor
 onready var puzzle:Area = $Puzzle
+onready var gui = $GUI
 
+var puzzle_palette = []
 var puzzle_vertices = []  # Stores the physical instances.
 var puzzle_edges = []  # Array of arrays
 var puzzle_edge_meshes = []  # Contains all the reference objects.
 var selected_vertex = null
+
+signal selection_changed(new_selection, previous_selection)
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -33,12 +37,9 @@ func _ready():
 	var text = file.get_as_text()
 	load_level(text)
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	pass
-
 func _on_color_changed(id, color_id, color):
-	pass
+	# We picked a color, so we can close the select wheel.
+	deselect_vertex()
 
 func _on_screen_tapped(pos):
 	# Raycast to the puzzle.
@@ -46,9 +47,10 @@ func _on_screen_tapped(pos):
 	var to = from + camera.project_ray_normal(pos) * 100
 	var space_state = get_world().direct_space_state
 	var result = space_state.intersect_ray(from, to, [], VERTEX_MASK, false, true)
-	if result and result['collider']:
-		deselect_vertices()
+	if result and result['collider'] and result['collider'] != selected_vertex:
 		select_vertex(result['collider'])
+	else:
+		deselect_vertex()
 
 func _on_screen_dragged(dxdy):
 	# TODO: Raycast to the surface and do a real rotation.
@@ -67,6 +69,11 @@ func load_level(level_data):
 	
 	var scale = 0.2
 	
+	self.puzzle_palette = []
+	for c in level['colors']:
+		self.puzzle_palette.append(Color(c[0], c[1], c[2]))
+	gui.set_palette(self.puzzle_palette)
+	
 	var vertices = level['vertices']
 	
 	for i in range(len(vertices)):
@@ -75,6 +82,7 @@ func load_level(level_data):
 		new_vert.id = i
 		new_vert.translate(pos)
 		new_vert.resize(scale)
+		new_vert.connect("color_changed", self, "_on_color_changed")
 		puzzle.add_child(new_vert)
 		puzzle_vertices.append(new_vert)
 	
@@ -96,7 +104,9 @@ func load_level(level_data):
 			puzzle.add_child(connection)
 
 func clear_puzzle():
+	self.puzzle_palette = []
 	for v in puzzle_vertices:
+		v.disconnect("color_changed", self, "_on_color_changed")
 		puzzle.remove_child(v)
 		v.queue_free()
 	puzzle_vertices = []
@@ -106,11 +116,16 @@ func clear_puzzle():
 	puzzle_edges = []
 	puzzle_edge_meshes = []
 	
-func deselect_vertices():
+func deselect_vertex(send_signal=true):
 	if selected_vertex != null:
-		selected_vertex.disconnect("color_changed", self, "_on_color_changed")
+		selected_vertex.on_deselect()
+		selected_vertex = null
+		if send_signal:
+			emit_signal("selection_changed", null, null)
 
 func select_vertex(vert):
+	var prev_vertex = selected_vertex
+	deselect_vertex(false)
 	selected_vertex = vert
-	selected_vertex.connect("color_changed", self, "_on_color_changed")
 	selected_vertex.on_select()
+	emit_signal("selection_changed", selected_vertex, prev_vertex)

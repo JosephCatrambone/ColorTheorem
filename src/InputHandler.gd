@@ -7,7 +7,7 @@ export var touch_time_threshold:float = 0.4
 var touch_event_times:Dictionary = {}
 var touch_event_positions:Dictionary = {}
 
-func _input(event):
+func _unhandled_input(event):
 	if event is InputEventScreenTouch:
 		var evt_id = event.index
 		if event.is_pressed():
