@@ -4,7 +4,7 @@
 [ext_resource path="res://src/InputHandler.gd" type="Script" id=2]
 [ext_resource path="res://scenes/GUI.tscn" type="PackedScene" id=3]
 [ext_resource path="res://materials/button.png" type="Texture" id=4]
-[ext_resource path="res://environments/space.tres" type="Environment" id=5]
+[ext_resource path="res://environments/desert.tres" type="Environment" id=5]
 [ext_resource path="res://scenes/Vertex.tscn" type="PackedScene" id=6]
 
 [sub_resource type="SphereShape" id=1]
