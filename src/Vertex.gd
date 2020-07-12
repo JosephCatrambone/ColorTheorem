@@ -11,6 +11,7 @@ export var glow_amount:float = 0.3
 
 onready var mesh:MeshInstance = $MeshInstance
 onready var collision:CollisionShape = $CollisionShape
+onready var anim_player:AnimationPlayer = $AnimationPlayer
 
 func _ready():
 	mesh.set_surface_material(0, mesh.get_surface_material(0).duplicate())
@@ -33,9 +34,12 @@ func set_color(new_color_index:int, new_color: Color):
 	emit_signal("color_changed", self.id, self.color_index, self.color)
 
 func on_select():
+	anim_player.play("Select")
+	yield(anim_player, "animation_finished")
 	var material:Material = mesh.get_surface_material(0)
 	material.set("emission_energy", glow_amount)
 
 func on_deselect():
-	var material:Material = mesh.get_surface_material(0)
-	material.set("emission_energy", 0.0)
+	#var material:Material = mesh.get_surface_material(0)
+	#material.set("emission_energy", 0.0)
+	anim_player.play("Deselect")

@@ -3,6 +3,7 @@ extends Node
 signal dragged(dxdy)
 signal tapped(xy)
 
+export var max_drag_distance:float = 10.0
 export var touch_time_threshold:float = 0.4
 var touch_event_times:Dictionary = {}
 var touch_event_positions:Dictionary = {}
@@ -26,8 +27,10 @@ func _unhandled_input(event):
 	elif event is InputEventScreenDrag:
 		var evt_id = event.index
 		if evt_id in touch_event_times:
-			var delta_position = event.position - touch_event_positions[evt_id]
+			var delta_position:Vector2 = event.position - touch_event_positions[evt_id]
 			touch_event_positions[evt_id] = event.position
+			if delta_position.length() > max_drag_distance:
+				delta_position = delta_position.normalized() * max_drag_distance
 			emit_signal("dragged", delta_position)
 	elif event is InputEvent:
 		pass
