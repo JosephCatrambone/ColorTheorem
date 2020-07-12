@@ -19,8 +19,12 @@
 
     "requirements":[
         {
+            "subgraph":[[1], [0]],
+            "colors":[1, 1]
+        },
+        {
             "subgraph":[[1], [0, 2], [1]],
-            "colors":[1, 1, 1]
+            "colors":[1, 1, 2]
         }
     ]
 }

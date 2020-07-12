@@ -24,7 +24,11 @@ var puzzle_edges = []  # Array of arrays
 var puzzle_edge_meshes = []  # Contains all the reference objects.
 var selected_vertex = null
 
+signal puzzle_reset
 signal selection_changed(new_selection, previous_selection)
+signal requirement_added(id, graph, graph_color_idx)
+signal requirement_met(id)
+signal requirement_failed(id)
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -37,7 +41,7 @@ func _ready():
 	
 	# Load first level
 	var file = File.new()
-	file.open("res://levels/level1.json", File.READ)
+	file.open("res://levels/level2.json", File.READ)
 	var text = file.get_as_text()
 	load_level(text)
 
@@ -118,6 +122,7 @@ func load_level(level_data):
 	# Load all the requirements for this puzzle.
 	self.puzzle_requirement_subgraphs = []
 	self.puzzle_requirement_colors = []
+	var req_id = 0
 	# This messy JSON decode is forcing the subgraph to be [[nbr1 of p, nbr 2 of p, ...], [nbr1 of q, nbr 2 of q, ...], ...]
 	# It's an array of arrays and we force the elements to be integers.
 	for req in level['requirements']:
@@ -132,16 +137,19 @@ func load_level(level_data):
 		for color_idx in req['colors']:
 			colors.append(int(color_idx))
 		self.puzzle_requirement_colors.append(colors)
-		# TODO: Build out the GUI.
+		# This signaling is messy.
+		emit_signal("requirement_added", req_id, subgraph, colors)
+		req_id += 1
 
 func update_puzzle_completion():
 	var all_satisfied = true
 	for i in len(self.puzzle_requirement_subgraphs):
 		# For each puzzle subgraph...
-		if !_contains_solution(self.puzzle_edges, self.puzzle_vertex_colors, self.puzzle_requirement_subgraphs[i], self.puzzle_requirement_colors[i]):
+		if _contains_solution(self.puzzle_edges, self.puzzle_vertex_colors, self.puzzle_requirement_subgraphs[i], self.puzzle_requirement_colors[i]):
+			emit_signal("requirement_met", i)
+		else:
+			emit_signal("requirement_failed", i)
 			all_satisfied = false
-			break
-	print("All satisfied: " + str(all_satisfied))
 
 func clear_puzzle():
 	self.puzzle_palette = []

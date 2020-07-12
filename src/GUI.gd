@@ -1,6 +1,9 @@
 extends Control
 
+var vscene = preload("res://scenes/GoalIndicator.tscn")
+
 onready var tween:Tween = $Tween
+onready var container:GridContainer = $GridContainer
 
 export var button_texture:Resource
 export var button_distance:float = 100.0
@@ -12,6 +15,10 @@ var buttons:Array
 
 func _ready():
 	get_parent().connect("selection_changed", self, "_on_selection_changed")
+	get_parent().connect("puzzle_reset", self, "_on_puzzle_reset")
+	get_parent().connect("requirement_added", self, "_on_requirement_added")
+	get_parent().connect("requirement_met", self, "_on_requirement_met")
+	get_parent().connect("requirement_failed", self, "_on_requirement_failed")
 
 func set_palette(colors):
 	# Recreate our buttons.
@@ -46,8 +53,23 @@ func _process(delta):
 		
 func _on_button_pressed(idx):
 	self.active_vertex.set_color(idx, palette[idx])
-	
 
+func _on_puzzle_reset():
+	for c in self.container.get_children():
+		c.queue_free()
+
+func _on_requirement_added(idx, graph, graph_colors):
+	print("Added req.")
+	var n = vscene.instance()
+	n.set_goal(graph, graph_colors, self.palette)
+	self.container.add_child(n)
+
+func _on_requirement_met(idx):
+	self.container.get_child(idx).on_met()
+	
+func _on_requirement_failed(idx):
+	self.container.get_child(idx).on_failed()
+	
 func _on_selection_changed(new_selection, old_selection):
 	self.active_vertex = new_selection
 	if new_selection != null:
