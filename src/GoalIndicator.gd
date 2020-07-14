@@ -1,10 +1,11 @@
 extends Control
 
-const TEXTURE_SCALE = 0.2
-const PUSH_FORCE = 25.0 * TEXTURE_SCALE
-const SOLVER_ITERATIONS = 50
+const TEXTURE_SCALE = 0.1
+const PUSH_FORCE = 30.0 * TEXTURE_SCALE
+const SOLVER_ITERATIONS = 200
 
 export var node_texture:Texture
+export var graph_offset:Vector2
 
 var graph:Array
 var nodes:Array
@@ -26,24 +27,33 @@ func set_goal(subgraph:Array, subgraph_color_indices:Array, subgraph_colors:Arra
 		nodes.append(n)
 	
 	# Spread the nodes out so they're easier to see.  Use a force-directed graph approach.
-	for i in range(SOLVER_ITERATIONS):
-		for n in nodes:
+	for iter in range(SOLVER_ITERATIONS):
+		for i in range(len(nodes)):
+			var n = nodes[i]
 			# Apply a force to every node WRT its neighbors.  
 			# Move away from those which it is not neighbors of, move towards those which are.
 			var force = Vector2()
-			for nbr in nodes:
+			for n2 in nodes:
+				var dist = (n.rect_position.distance_squared_to(n2.rect_position))
+				force += PUSH_FORCE*(n.rect_position - n2.rect_position) * (1.0 / (1.0 + dist))
+			n.rect_position += force
+			force = Vector2()
+			for nbr_idx in graph[i]:
+				var nbr = nodes[nbr_idx]
 				var dist = (n.rect_position.distance_squared_to(nbr.rect_position))
-				force += PUSH_FORCE*(n.rect_position - nbr.rect_position) * (1.0 / (1.0 + dist))
+				force -= PUSH_FORCE*(n.rect_position - nbr.rect_position) * (1.0 / (1.0 + dist))
 			n.rect_position += force
 	
 	# Calculate the mean.
 	var mean_pos = Vector2()
 	for n in self.nodes:
-		mean_pos += n.rect_position / float(len(self.nodes))
+		mean_pos += n.rect_position
+	mean_pos /= float(len(self.nodes))
 	
 	# Move to center and calculate bounds.
 	for n in self.nodes:
 		n.rect_position -= mean_pos
+		n.rect_position += graph_offset
 		max_dist_to_center = max(max_dist_to_center, n.rect_position.distance_to(Vector2()))
 		self.add_child(n)
 	
@@ -60,9 +70,10 @@ func on_failed():
 	self.modulate.a = 1.0
 
 func _draw():
+	var texture_offset = Vector2(node_texture.get_width(), node_texture.get_height()) * 0.5 * TEXTURE_SCALE
 	for i in range(len(self.graph)):
-		var from = Vector2(self.nodes[i].rect_position.x, self.nodes[i].rect_position.y)
+		var from = Vector2(self.nodes[i].rect_position.x, self.nodes[i].rect_position.y) + texture_offset
 		for nbr_idx in self.graph[i]:
-			var to = Vector2(self.nodes[nbr_idx].rect_position.x, self.nodes[nbr_idx].rect_position.y)
+			var to = Vector2(self.nodes[nbr_idx].rect_position.x, self.nodes[nbr_idx].rect_position.y) + texture_offset
 			.draw_line(from, to, Color.white, 2.0, true)
 

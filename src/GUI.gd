@@ -59,8 +59,8 @@ func _on_puzzle_reset():
 		c.queue_free()
 
 func _on_requirement_added(idx, graph, graph_colors):
-	print("Added req.")
 	var n = vscene.instance()
+	n.graph_offset = Vector2(100, 100)
 	n.set_goal(graph, graph_colors, self.palette)
 	self.container.add_child(n)
 

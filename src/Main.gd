@@ -15,6 +15,7 @@ onready var puzzle:Area = $Puzzle
 onready var gui = $GUI
 
 # TODO: I don't like how puzzle_requirements is a list of Dicts.  Maybe break it out.
+var current_level = 1
 var puzzle_requirement_subgraphs = [] # A list of subgraphs where each subgraph indexes into a list of neighbors. [[nbr idx,] ]
 var puzzle_requirement_colors = [] # A list of lists of color palette IDs.
 var puzzle_vertex_colors = [] # Map of vertex IDX -> Palette IDX.
@@ -30,6 +31,7 @@ signal requirement_added(id, graph, graph_color_idx)
 signal requirement_met(id)
 signal requirement_failed(id)
 
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	puzzle_vertices = []
@@ -40,16 +42,15 @@ func _ready():
 	input.connect("dragged", self, "_on_screen_dragged")
 	
 	# Load first level
-	var file = File.new()
-	file.open("res://levels/level2.json", File.READ)
-	var text = file.get_as_text()
-	load_level(text)
+	load_level("res://levels/level1.json")
 
 func _on_color_changed(id, color_id, color):
 	# We picked a color, so we can close the select wheel.
 	self.puzzle_vertex_colors[id] = color_id
 	deselect_vertex()
-	update_puzzle_completion()
+	if update_puzzle_completion():
+		current_level += 1
+		load_level("res://levels/level"+ str(current_level) +".json")
 
 func _on_screen_tapped(pos):
 	# Raycast to the puzzle.
@@ -67,8 +68,12 @@ func _on_screen_dragged(dxdy):
 	puzzle.rotate_y(dxdy.x/100)
 	puzzle.rotate_x(dxdy.y/100)
 
-func load_level(level_data):
+func load_level(level_name):
 	clear_puzzle()
+	
+	var file = File.new()
+	file.open("res://levels/level" + str(current_level) + ".json", File.READ)
+	var level_data = file.get_as_text()
 	
 	var parse_result:JSONParseResult = JSON.parse(level_data)
 	if parse_result.error != OK:
@@ -141,7 +146,7 @@ func load_level(level_data):
 		emit_signal("requirement_added", req_id, subgraph, colors)
 		req_id += 1
 
-func update_puzzle_completion():
+func update_puzzle_completion() -> bool:
 	var all_satisfied = true
 	for i in len(self.puzzle_requirement_subgraphs):
 		# For each puzzle subgraph...
@@ -150,8 +155,10 @@ func update_puzzle_completion():
 		else:
 			emit_signal("requirement_failed", i)
 			all_satisfied = false
+	return all_satisfied
 
 func clear_puzzle():
+	emit_signal("puzzle_reset")
 	self.puzzle_palette = []
 	for v in puzzle_vertices:
 		v.disconnect("color_changed", self, "_on_color_changed")
@@ -178,6 +185,37 @@ func select_vertex(vert):
 	selected_vertex.on_select()
 	emit_signal("selection_changed", selected_vertex, prev_vertex)
 	
+func _get_graph_labels(graph:Array, graph_colors:Array) -> Array:
+	# Go through a graph and build a mapping from vertex index to a set of properties like 'cardinality' and 'child hash'.
+	# NOTE: Child needs to be sorted so it's order invariant.
+	# Init our result.
+	var labels = []
+	for i in range(len(graph)):
+		labels.append({})
+	# Go through and get the cardinality.
+	var max_cardinality = 0
+	for i in range(len(graph)):
+		var cardinality = len(graph[i])
+		max_cardinality = max(max_cardinality, cardinality)
+		labels[i]['cardinality'] = cardinality
+	# Go through and 'hash' the colors of the nodes, starting from low cardinality.
+	for c in range(max_cardinality):
+		for i in range(len(graph)):
+			if labels[i]['cardinality'] == c:
+				# Look around me and, for nodes with lower carinality, take their hashes an combine them.
+				var i_hash := []
+				for nbr_idx in graph[i]:
+					if labels[nbr_idx]['cardinality'] < c:
+						i_hash.append(labels[nbr_idx]['hash'])
+				# Now sort the hashes and convert it to a string.
+				i_hash.sort()
+				var new_hash = str(graph_colors[i])
+				for d in i_hash:
+					new_hash += str(d)
+				labels[i]['hash'] = new_hash
+				# Hash is now a tail of the possible colors we can get from this + child nodes.
+	return labels
+	
 func _contains_solution(graph:Array, graph_colors:Array, subgraph:Array, subgraph_colors:Array, mapping:Dictionary = {}, g_idx_used:Array = [], s_idx_used:Array = []):
 	# TODO: This is a horrifying brute force exponential O(x^n) runtime solution.
 	# Please for the love of god implement Ullman's paper.
@@ -193,6 +231,10 @@ func _contains_solution(graph:Array, graph_colors:Array, subgraph:Array, subgrap
 		s_idx_used.push_back(s_idx)
 		for g_idx in range(len(graph)):
 			if g_idx in g_idx_used:
+				continue
+			if subgraph_colors[s_idx] != graph_colors[g_idx]:
+				continue
+			if len(subgraph[s_idx]) > len(graph[g_idx]):
 				continue
 			g_idx_used.push_back(g_idx)
 			mapping[s_idx] = g_idx

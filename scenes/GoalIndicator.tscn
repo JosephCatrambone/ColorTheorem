@@ -4,10 +4,8 @@
 [ext_resource path="res://materials/button.png" type="Texture" id=2]
 
 [node name="GoalIndicator" type="Panel"]
-margin_left = -100.0
-margin_top = -100.0
-margin_right = 100.0
-margin_bottom = 100.0
+margin_right = 200.0
+margin_bottom = 200.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 0

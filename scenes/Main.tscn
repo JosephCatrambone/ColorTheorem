@@ -18,15 +18,14 @@ environment = ExtResource( 5 )
 fov = 60.0
 near = 0.1
 
+[node name="GUI" parent="." instance=ExtResource( 3 )]
+mouse_filter = 2
+button_texture = ExtResource( 4 )
+
 [node name="Puzzle" type="Area" parent="."]
 
 [node name="CollisionShape" type="CollisionShape" parent="Puzzle"]
 shape = SubResource( 1 )
-
-[node name="GUI" parent="." instance=ExtResource( 3 )]
-mouse_filter = 2
-button_texture = ExtResource( 4 )
-button_distance = 30.0
 
 [node name="InputMonitor" type="Node" parent="."]
 script = ExtResource( 2 )
