@@ -21,12 +21,15 @@ func _ready():
 	get_parent().connect("requirement_failed", self, "_on_requirement_failed")
 
 func set_palette(colors):
+	# Clear active vertex to avoid old use.
+	active_vertex = null
 	# Recreate our buttons.
 	palette = colors
 	# Reset all buttons
 	for b in buttons:
 		# Don't need to disconnect when freeing.
 		b.queue_free()
+	buttons = []
 	for i in range(len(colors)):
 		# The 'live' button will actually report events.
 		var b = TextureButton.new()
@@ -79,7 +82,6 @@ func _on_selection_changed(new_selection, old_selection):
 	else:
 		fade_out_buttons(0.0)
 		#tween.interpolate_callback(self, 0.3, "fade_out_buttons", 1.0, 0.0, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
-	tween.start()
 		
 func fade_out_buttons(amount):	
 	for b in buttons:
